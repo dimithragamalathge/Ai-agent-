@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Review Queue{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Review Queue</h1>
+  <span class="badge badge-primary">{{ posts|length }} post{% if posts|length != 1 %}s{% endif %} waiting</span>
+</div>
+
+{% if not posts %}
+<div class="empty-state">
+  <div class="empty-icon">📭</div>
+  <h2>No posts in queue</h2>
+  <p>Run the agent to generate new content:</p>
+  <code class="code-block">python main.py run</code>
+</div>
+{% else %}
+<div class="post-grid">
+  {% for post in posts %}
+  <div class="post-card status-{{ post.status }}">
+    {% if post.image_paths %}
+    <div class="post-thumbnail">
+      <img src="{{ url_for('serve_image', post_id=post.id, slide_index=0) }}"
+           alt="Post thumbnail"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+      <div class="thumbnail-placeholder" style="display:none;">
+        {% if post.format == 'carousel' %}🎠{% else %}🖼{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="post-thumbnail">
+      <div class="thumbnail-placeholder">
+        {% if post.format == 'carousel' %}🎠 Carousel{% else %}🖼 Single{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="post-card-body">
+      <div class="post-meta">
+        <span class="tag tag-{{ post.format }}">{{ post.format }}</span>
+        <span class="tag tag-status-{{ post.status }}">{{ post.status }}</span>
+      </div>
+      <h3 class="post-hook">{{ post.hook }}</h3>
+      <p class="post-source">Source: {{ post.article_title[:60] }}{% if post.article_title|length > 60 %}…{% endif %}</p>
+      <p class="post-date">Created {{ post.created_at | dt }}</p>
+      <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-primary">
+        Review &rarr;
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

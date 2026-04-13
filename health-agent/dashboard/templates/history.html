@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Post History{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Post History</h1>
+  <span class="badge">{{ posts|length }} total</span>
+</div>
+
+{% if not posts %}
+<div class="empty-state">
+  <div class="empty-icon">📊</div>
+  <h2>No posts yet</h2>
+  <p>Published posts will appear here.</p>
+</div>
+{% else %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Hook</th>
+      <th>Format</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Posted</th>
+      <th>Instagram ID</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for post in posts %}
+    <tr class="status-row-{{ post.status }}">
+      <td><a href="{{ url_for('post_detail', post_id=post.id) }}">#{{ post.id }}</a></td>
+      <td>{{ post.hook[:60] }}{% if post.hook|length > 60 %}…{% endif %}</td>
+      <td><span class="tag tag-{{ post.format }}">{{ post.format }}</span></td>
+      <td><span class="tag tag-status-{{ post.status }}">{{ post.status }}</span></td>
+      <td>{{ post.created_at | dt }}</td>
+      <td>{{ post.posted_at | dt }}</td>
+      <td>
+        {% if post.instagram_media_id %}
+        <code>{{ post.instagram_media_id }}</code>
+        {% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
