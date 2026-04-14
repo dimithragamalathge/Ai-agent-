@@ -40,7 +40,8 @@ CANVA_REFRESH_TOKEN: str = os.getenv("CANVA_REFRESH_TOKEN", "")
 CANVA_API_BASE: str = "https://api.canva.com/rest/v1"
 CANVA_AUTH_URL: str = "https://www.canva.com/api/oauth/authorize"
 CANVA_TOKEN_URL: str = "https://api.canva.com/rest/v1/oauth/token"
-CANVA_REDIRECT_URI: str = "http://localhost:8080/canva/callback"
+# Set this to https://yourusername.pythonanywhere.com/canva/callback on PythonAnywhere
+CANVA_REDIRECT_URI: str = os.getenv("CANVA_REDIRECT_URI", "http://localhost:8080/canva/callback")
 
 # ─── Instagram Graph API ──────────────────────────────────────────────────────
 INSTAGRAM_USER_ID: str = os.getenv("INSTAGRAM_USER_ID", "")
@@ -57,5 +58,6 @@ SCHEDULE_TIME: str = os.getenv("SCHEDULE_TIME", "08:00")
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 FLASK_SECRET_KEY: str = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
+DASHBOARD_PASSWORD: str = os.getenv("DASHBOARD_PASSWORD", "")
 DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///health_agent.db")
 OUTPUT_DIR: Path = Path(os.getenv("OUTPUT_DIR", "./output/images"))

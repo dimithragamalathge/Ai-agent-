@@ -7,6 +7,13 @@
   <span class="badge badge-primary">{{ posts|length }} post{% if posts|length != 1 %}s{% endif %} waiting</span>
 </div>
 
+{% if not canva_configured %}
+<div class="alert alert-info" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+  <span>Canva is not connected yet. Connect it to auto-generate post images.</span>
+  <a href="{{ url_for('canva_auth_start') }}" class="btn btn-primary" style="white-space:nowrap;">Connect Canva</a>
+</div>
+{% endif %}
+
 {% if not posts %}
 <div class="empty-state">
   <div class="empty-icon">📭</div>
