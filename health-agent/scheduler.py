@@ -109,17 +109,14 @@ def run_full_pipeline() -> None:
             db.flush()
             post_id = post.id
 
-        # ── 5. Generate Canva images ───────────────────────────────────────
+        # ── 5. Generate images (Pillow by default, Canva if configured) ──────
         image_paths: list[str] = []
-        if canva_client:
-            logger.info("Step 4/5: Creating Canva design for post %d…", post_id)
-            try:
-                image_paths = create_post_images(post_content, post_id, client=canva_client)
-                logger.info("Created %d image(s) for post %d", len(image_paths), post_id)
-            except Exception as exc:
-                logger.error("Canva design failed for post %d: %s", post_id, exc)
-        else:
-            logger.warning("Canva not configured — post %d has no images", post_id)
+        logger.info("Step 4/5: Generating images for post %d…", post_id)
+        try:
+            image_paths = create_post_images(post_content, post_id, client=canva_client)
+            logger.info("Created %d image(s) for post %d", len(image_paths), post_id)
+        except Exception as exc:
+            logger.error("Image generation failed for post %d: %s", post_id, exc)
 
         # Save image paths back to the post
         with get_session() as db:

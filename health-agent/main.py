@@ -219,5 +219,52 @@ def verify():
         click.echo("  All systems go. Run: python main.py run")
 
 
+@cli.command("generate-images")
+def generate_images():
+    """Generate images for any posts in the queue that don't have them yet."""
+    configure_logging()
+    from database.db import get_session, init_db
+    from database.models import Post
+    from designer.templates import create_post_images
+    from processor.generator import GeneratedPost
+    import json
+
+    init_db()
+
+    with get_session() as db:
+        posts = db.query(Post).filter(
+            Post.status.in_(["draft", "approved"]),
+        ).all()
+
+        no_images = [p for p in posts if not p.get_image_paths()]
+
+    if not no_images:
+        click.echo("All posts already have images.")
+        return
+
+    click.echo(f"Generating images for {len(no_images)} post(s)…")
+
+    for p in no_images:
+        slides = p.get_slide_texts()
+        post_content = GeneratedPost(
+            format=p.format,
+            hook=p.hook or "",
+            caption=p.caption,
+            hashtags=p.get_hashtags(),
+            slides=slides,
+        )
+        try:
+            paths = create_post_images(post_content, p.id)
+            with get_session() as db:
+                post = db.query(Post).filter_by(id=p.id).first()
+                if post:
+                    post.set_image_paths(paths)
+            click.echo(f"  Post {p.id}: {len(paths)} image(s) created")
+        except Exception as exc:
+            click.echo(f"  Post {p.id}: FAILED — {exc}")
+
+    click.echo("Done. Refresh your dashboard to see the images.")
+
+
 if __name__ == "__main__":
     cli()
