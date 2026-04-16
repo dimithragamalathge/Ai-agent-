@@ -91,6 +91,9 @@ a:hover { text-decoration: underline; }
 .btn-full  { width: 100%; display: block; margin-top: .5rem; }
 
 .btn-primary   { background: var(--color-primary); color: #fff; }
+.btn-generate  { background: #E8A84C; color: #fff; font-weight: 600; letter-spacing: .02em; }
+.btn-generate:hover { background: #d4922e; }
+.btn-generate:disabled { background: #c8b48a; cursor: not-allowed; opacity: 1; }
 .btn-secondary { background: #e2e8f0; color: var(--color-text); }
 .btn-success   { background: var(--color-success); color: #fff; }
 .btn-danger    { background: var(--color-danger); color: #fff; }

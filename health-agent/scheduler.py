@@ -77,10 +77,14 @@ def run_full_pipeline() -> None:
     canva_client = CanvaClient() if (config.CANVA_CLIENT_ID and config.CANVA_ACCESS_TOKEN) else None
     posts_created = 0
 
-    for article in selected:
-        logger.info("Step 3/5: Generating content for: %s", article.title[:60])
+    # Rotate through all 4 types so each batch produces a mix
+    type_rotation = ["stat", "tips", "myth_fact", "quote"]
+
+    for idx, article in enumerate(selected):
+        force_type = type_rotation[idx % len(type_rotation)]
+        logger.info("Step 3/5: Generating %s post for: %s", force_type, article.title[:60])
         try:
-            post_content = generate_post(article)
+            post_content = generate_post(article, force_type=force_type)
         except Exception as exc:
             logger.error("Content generation failed for %r: %s", article.title, exc)
             continue

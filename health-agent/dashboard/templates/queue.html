@@ -4,7 +4,14 @@
 {% block content %}
 <div class="page-header">
   <h1>Review Queue</h1>
-  <span class="badge badge-primary">{{ posts|length }} post{% if posts|length != 1 %}s{% endif %} waiting</span>
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+    <span class="badge badge-primary">{{ posts|length }} post{% if posts|length != 1 %}s{% endif %} waiting</span>
+    <form method="POST" action="{{ url_for('run_pipeline') }}" id="pipeline-form">
+      <button type="submit" class="btn btn-generate" id="generate-btn">
+        ✦ Generate New Posts
+      </button>
+    </form>
+  </div>
 </div>
 
 {% if not canva_configured %}
@@ -18,8 +25,7 @@
 <div class="empty-state">
   <div class="empty-icon">📭</div>
   <h2>No posts in queue</h2>
-  <p>Run the agent to generate new content:</p>
-  <code class="code-block">python main.py run</code>
+  <p>Click <strong>Generate New Posts</strong> above to create content.</p>
 </div>
 {% else %}
 <div class="post-grid">
@@ -58,4 +64,50 @@
   {% endfor %}
 </div>
 {% endif %}
+
+<script>
+(function () {
+  var btn = document.getElementById('generate-btn');
+  var form = document.getElementById('pipeline-form');
+  var pollInterval = null;
+
+  function checkStatus() {
+    fetch("{{ url_for('pipeline_status') }}")
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.running) {
+          btn.disabled = true;
+          btn.textContent = '⏳ Generating…';
+        } else {
+          btn.disabled = false;
+          btn.textContent = '✦ Generate New Posts';
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }
+      })
+      .catch(function(){});
+  }
+
+  // Check on load
+  checkStatus();
+
+  form.addEventListener('submit', function(){
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    // Poll every 10s and auto-refresh page when done
+    pollInterval = setInterval(function(){
+      fetch("{{ url_for('pipeline_status') }}")
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if (!data.running) {
+            clearInterval(pollInterval);
+            window.location.reload();
+          }
+        });
+    }, 10000);
+  });
+})();
+</script>
 {% endblock %}

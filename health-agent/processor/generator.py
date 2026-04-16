@@ -77,13 +77,18 @@ Total hashtags: exactly 20.
 """
 
 
-def generate_post(article: ScrapedArticle) -> GeneratedPost:
+def generate_post(article: ScrapedArticle, force_type: str | None = None) -> GeneratedPost:
     """
     Generate a complete Instagram post from a single scraped article.
     Automatically picks post_type and format based on content.
     """
-    prompt = f"""Create an Instagram post for this health article.
+    type_instruction = (
+        f"\nYou MUST use post_type: \"{force_type}\" — do not choose a different type.\n"
+        if force_type else ""
+    )
 
+    prompt = f"""Create an Instagram post for this health article.
+{type_instruction}
 SOURCE: {article.source.upper()}
 TOPIC: {article.topic}
 TITLE: {article.title}

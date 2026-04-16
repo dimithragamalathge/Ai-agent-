@@ -21,6 +21,7 @@ import base64
 import secrets
 import logging
 import sys
+import threading
 import urllib.parse
 from datetime import datetime
 from functools import wraps
@@ -28,7 +29,7 @@ from pathlib import Path
 
 import requests
 from flask import (
-    Flask, flash, redirect, render_template,
+    Flask, flash, jsonify, redirect, render_template,
     request, send_file, session, url_for,
 )
 
@@ -42,6 +43,9 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 app.secret_key = config.FLASK_SECRET_KEY
+
+_pipeline_running = False
+_pipeline_lock = threading.Lock()
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -374,6 +378,38 @@ def serve_image(post_id: int, slide_index: int):
         return f"Image file missing: {path}", 404
 
     return send_file(path, mimetype="image/png")
+
+
+@app.route("/run-pipeline", methods=["POST"])
+@login_required
+def run_pipeline():
+    global _pipeline_running
+    with _pipeline_lock:
+        if _pipeline_running:
+            flash("Pipeline is already running. Refresh in a few minutes.", "info")
+            return redirect(url_for("queue"))
+        _pipeline_running = True
+
+    def _run():
+        global _pipeline_running
+        try:
+            from scheduler import run_full_pipeline
+            run_full_pipeline()
+        except Exception as exc:
+            logger.error("Pipeline error: %s", exc)
+        finally:
+            with _pipeline_lock:
+                _pipeline_running = False
+
+    threading.Thread(target=_run, daemon=True).start()
+    flash("Generating new posts… check back in 1–2 minutes and refresh.", "info")
+    return redirect(url_for("queue"))
+
+
+@app.route("/pipeline-status")
+@login_required
+def pipeline_status():
+    return jsonify({"running": _pipeline_running})
 
 
 def create_app() -> Flask:
