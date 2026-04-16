@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Health Agent{% endblock %} — Content Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-brand">
+      <span class="nav-logo">⚕</span>
+      <span class="nav-title">Health Agent</span>
+    </div>
+    <div class="nav-links">
+      <a href="{{ url_for('queue') }}" class="nav-link {% if request.endpoint == 'queue' %}active{% endif %}">
+        Review Queue
+      </a>
+      <a href="{{ url_for('history') }}" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+        History
+      </a>
+      <a href="{{ url_for('logout') }}" class="nav-link">Log Out</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <p>Health Content AI Agent &mdash; Review posts before they go live.</p>
+  </footer>
+</body>
+</html>

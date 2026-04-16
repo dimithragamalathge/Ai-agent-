@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Health Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.10);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+    .logo { font-size: 2.5rem; margin-bottom: .75rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: .3rem; }
+    p  { color: #64748b; font-size: .9rem; margin-bottom: 1.5rem; }
+    .alert {
+      padding: .65rem .9rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: .88rem;
+      font-weight: 500;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: .65rem .9rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border-color .15s;
+      -webkit-appearance: none;
+    }
+    input[type="password"]:focus { border-color: #3b82f6; }
+    button {
+      width: 100%;
+      padding: .7rem;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    button:hover { background: #1d4ed8; }
+    .hint { margin-top: 1.25rem; font-size: .78rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">⚕</div>
+    <h1>Health Agent</h1>
+    <p>Enter your dashboard password to continue.</p>
+
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+    <div class="alert">{{ message }}</div>
+    {% endfor %}
+
+    <form method="POST">
+      <input type="password" name="password" placeholder="Dashboard password"
+             autofocus autocomplete="current-password" />
+      <button type="submit">Sign In</button>
+    </form>
+    <p class="hint">Password is set in your .env file as DASHBOARD_PASSWORD</p>
+  </div>
+</body>
+</html>

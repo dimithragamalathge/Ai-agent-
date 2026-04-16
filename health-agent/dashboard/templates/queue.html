@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Review Queue{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Review Queue</h1>
+  <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+    <span class="badge badge-primary">{{ posts|length }} post{% if posts|length != 1 %}s{% endif %} waiting</span>
+    <form method="POST" action="{{ url_for('run_pipeline') }}" id="pipeline-form">
+      <button type="submit" class="btn btn-generate" id="generate-btn">
+        ✦ Generate New Posts
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if not canva_configured %}
+<div class="alert alert-info" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+  <span>Canva is not connected yet. Connect it to auto-generate post images.</span>
+  <a href="{{ url_for('canva_auth_start') }}" class="btn btn-primary" style="white-space:nowrap;">Connect Canva</a>
+</div>
+{% endif %}
+
+{% if not posts %}
+<div class="empty-state">
+  <div class="empty-icon">📭</div>
+  <h2>No posts in queue</h2>
+  <p>Click <strong>Generate New Posts</strong> above to create content.</p>
+</div>
+{% else %}
+<div class="post-grid">
+  {% for post in posts %}
+  <div class="post-card status-{{ post.status }}">
+    {% if post.image_paths %}
+    <div class="post-thumbnail">
+      <img src="{{ url_for('serve_image', post_id=post.id, slide_index=0) }}"
+           alt="Post thumbnail"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+      <div class="thumbnail-placeholder" style="display:none;">
+        {% if post.format == 'carousel' %}🎠{% else %}🖼{% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="post-thumbnail">
+      <div class="thumbnail-placeholder">
+        {% if post.format == 'carousel' %}🎠 Carousel{% else %}🖼 Single{% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="post-card-body">
+      <div class="post-meta">
+        <span class="tag tag-{{ post.format }}">{{ post.format }}</span>
+        <span class="tag tag-status-{{ post.status }}">{{ post.status }}</span>
+      </div>
+      <h3 class="post-hook">{{ post.hook }}</h3>
+      <p class="post-source">Source: {{ post.article_title[:60] }}{% if post.article_title|length > 60 %}…{% endif %}</p>
+      <p class="post-date">Created {{ post.created_at | dt }}</p>
+      <a href="{{ url_for('post_detail', post_id=post.id) }}" class="btn btn-primary">
+        Review &rarr;
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+(function () {
+  var btn = document.getElementById('generate-btn');
+  var form = document.getElementById('pipeline-form');
+  var pollInterval = null;
+
+  function checkStatus() {
+    fetch("{{ url_for('pipeline_status') }}")
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data.running) {
+          btn.disabled = true;
+          btn.textContent = '⏳ Generating…';
+        } else {
+          btn.disabled = false;
+          btn.textContent = '✦ Generate New Posts';
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }
+      })
+      .catch(function(){});
+  }
+
+  // Check on load
+  checkStatus();
+
+  form.addEventListener('submit', function(){
+    btn.disabled = true;
+    btn.textContent = '⏳ Generating…';
+    // Poll every 10s and auto-refresh page when done
+    pollInterval = setInterval(function(){
+      fetch("{{ url_for('pipeline_status') }}")
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          if (!data.running) {
+            clearInterval(pollInterval);
+            window.location.reload();
+          }
+        });
+    }, 10000);
+  });
+})();
+</script>
+{% endblock %}

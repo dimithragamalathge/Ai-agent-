@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Post #{{ post.id }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <a href="{{ url_for('queue') }}" class="btn btn-ghost">&larr; Back to Queue</a>
+  <h1>Post #{{ post.id }}
+    <span class="tag tag-{{ post.format }}">{{ post.format }}</span>
+    <span class="tag tag-status-{{ post.status }}">{{ post.status }}</span>
+  </h1>
+</div>
+
+<div class="detail-layout">
+
+  <!-- ── Left: Preview ──────────────────────────────── -->
+  <div class="detail-preview">
+    <h2>Preview</h2>
+    {% if post.image_paths %}
+      <div class="image-gallery">
+        {% for i in range(post.image_paths|length) %}
+        <div class="image-frame">
+          <img src="{{ url_for('serve_image', post_id=post.id, slide_index=i) }}"
+               alt="Slide {{ i+1 }}"
+               onerror="this.src=''; this.alt='Image not found';" />
+          {% if post.format == 'carousel' %}
+          <p class="slide-label">Slide {{ i + 1 }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="no-image-notice">
+        <p>No images generated yet.</p>
+        <p class="hint">If Canva credentials are configured, images appear here after running the pipeline.</p>
+      </div>
+    {% endif %}
+
+    {% if post.slides %}
+    <div class="slide-texts">
+      <h3>Carousel Slides</h3>
+      {% for slide in post.slides %}
+      <div class="slide-card">
+        <strong>{{ slide.heading }}</strong>
+        <p>{{ slide.body }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="source-info">
+      <p><strong>Source article:</strong>
+        <a href="{{ post.article_url }}" target="_blank" rel="noopener">{{ post.article_title }}</a>
+      </p>
+      <p><strong>Created:</strong> {{ post.created_at | dt }}</p>
+      {% if post.posted_at %}
+      <p><strong>Posted:</strong> {{ post.posted_at | dt }}</p>
+      {% endif %}
+      {% if post.instagram_media_id %}
+      <p><strong>Instagram ID:</strong> {{ post.instagram_media_id }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Right: Edit & Actions ──────────────────────── -->
+  <div class="detail-actions">
+
+    <!-- Edit form -->
+    <div class="card">
+      <h2>Edit Content</h2>
+      <form method="POST" action="{{ url_for('post_save', post_id=post.id) }}">
+        <div class="form-group">
+          <label for="caption">Caption</label>
+          <textarea id="caption" name="caption" rows="10" class="form-control">{{ post.caption }}</textarea>
+          <p class="hint">Tip: Keep the hook as the first line. 150–200 words works best.</p>
+        </div>
+        <div class="form-group">
+          <label for="hashtags">Hashtags</label>
+          <textarea id="hashtags" name="hashtags" rows="3" class="form-control">{{ post.hashtags }}</textarea>
+          <p class="hint">Space or comma-separated. Include the # symbol.</p>
+        </div>
+        <button type="submit" class="btn btn-secondary">Save Changes</button>
+      </form>
+    </div>
+
+    <!-- Actions -->
+    {% if post.status in ('draft', 'approved') %}
+    <div class="card">
+      <h2>Actions</h2>
+
+      {% if post.status == 'draft' %}
+      <form method="POST" action="{{ url_for('post_approve', post_id=post.id) }}">
+        <button type="submit" class="btn btn-success btn-full">
+          Approve Post
+        </button>
+      </form>
+      {% endif %}
+
+      {% if post.status in ('draft', 'approved') %}
+      <form method="POST" action="{{ url_for('post_publish', post_id=post.id) }}"
+            onsubmit="return confirm('Post this to Instagram now?');">
+        <button type="submit" class="btn btn-instagram btn-full">
+          Publish to Instagram Now
+        </button>
+      </form>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('post_reject', post_id=post.id) }}"
+            onsubmit="return confirm('Reject this post?');">
+        <button type="submit" class="btn btn-danger btn-full">
+          Reject &amp; Discard
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if post.status == 'posted' %}
+    <div class="card card-success">
+      <h2>Published</h2>
+      <p>This post is live on Instagram.</p>
+      {% if post.instagram_media_id %}
+      <p>Media ID: <code>{{ post.instagram_media_id }}</code></p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if post.status == 'failed' %}
+    <div class="card card-error">
+      <h2>Publish Failed</h2>
+      <p>Something went wrong. Check the terminal logs.</p>
+      <form method="POST" action="{{ url_for('post_publish', post_id=post.id) }}">
+        <button type="submit" class="btn btn-instagram btn-full">Retry Publish</button>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
