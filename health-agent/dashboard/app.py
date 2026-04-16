@@ -364,8 +364,14 @@ def serve_image(post_id: int, slide_index: int):
         return "Image not found", 404
 
     path = Path(paths[slide_index])
+
+    # Resolve relative paths against the project root
+    if not path.is_absolute():
+        project_root = Path(__file__).parent.parent
+        path = project_root / path
+
     if not path.exists():
-        return "Image file missing from disk", 404
+        return f"Image file missing: {path}", 404
 
     return send_file(path, mimetype="image/png")
 
