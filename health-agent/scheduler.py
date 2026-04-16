@@ -98,6 +98,7 @@ def run_full_pipeline() -> None:
         with get_session() as db:
             post = Post(
                 article_id=article_id,
+                post_type=post_content.post_type,
                 format=post_content.format,
                 hook=post_content.hook,
                 caption=post_content.caption,

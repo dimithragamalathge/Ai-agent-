@@ -38,7 +38,7 @@ def create_post_images(
         logger.info("Using Canva for post %d", post_id)
         return _create_with_canva(post, post_id, output_dir, client)
     else:
-        logger.info("Using Pillow image generator for post %d", post_id)
+        logger.info("Using Pillow image generator for post %d (type: %s)", post_id, post.post_type)
         return _create_with_pillow(post, post_id, output_dir)
 
 
@@ -51,33 +51,56 @@ def _create_with_pillow(
     output_dir: Path,
 ) -> list[str]:
     from designer.image_generator import (
-        generate_single_post,
-        generate_carousel_cover,
-        generate_carousel_slide,
+        generate_stat_card,
+        generate_tips_cover,
+        generate_tips_slide,
+        generate_tips_cta,
+        generate_myth_slide,
+        generate_fact_slide,
+        generate_quote_card,
     )
 
     handle = config.INSTAGRAM_HANDLE
     paths: list[str] = []
+    post_type = getattr(post, "post_type", "tips")
 
-    if post.format == "carousel" and post.slides:
-        total = len(post.slides) + 1  # cover + content slides
+    # ── Stat card ──────────────────────────────────────────────────────────────
+    if post_type == "stat":
+        out = output_dir / "post.png"
+        generate_stat_card(
+            stat_number=post.stat_number or post.hook[:10],
+            stat_label=post.stat_label or post.hook,
+            stat_context=post.stat_context or post.caption[:140],
+            stat_source=post.stat_source or "",
+            brand_handle=handle,
+            output_path=out,
+        )
+        paths.append(str(out))
 
-        # Cover slide
+    # ── Tip carousel ───────────────────────────────────────────────────────────
+    elif post_type == "tips":
+        tips = post.tips if post.tips else [
+            {"number": f"{i+1:02d}", "heading": s.get("heading",""), "body": s.get("body",""), "bonus": ""}
+            for i, s in enumerate(post.slides)
+        ]
+        total = len(tips) + 2  # cover + tips + CTA
+
         cover_path = output_dir / "slide_00_cover.png"
-        generate_carousel_cover(
-            hook=post.hook or post.caption[:80],
+        generate_tips_cover(
+            tips_title=post.tips_title or post.hook or post.caption[:60],
             total_slides=total,
             brand_handle=handle,
             output_path=cover_path,
         )
         paths.append(str(cover_path))
 
-        # Content slides
-        for idx, slide in enumerate(post.slides):
+        for idx, tip in enumerate(tips):
             slide_path = output_dir / f"slide_{idx + 1:02d}.png"
-            generate_carousel_slide(
-                heading=slide.get("heading", ""),
-                body=slide.get("body", ""),
+            generate_tips_slide(
+                number=tip.get("number", f"{idx+1:02d}"),
+                heading=tip.get("heading", ""),
+                body=tip.get("body", ""),
+                bonus=tip.get("bonus", ""),
                 slide_num=idx + 2,
                 total_slides=total,
                 brand_handle=handle,
@@ -85,16 +108,70 @@ def _create_with_pillow(
             )
             paths.append(str(slide_path))
 
-    else:
-        # Single post
-        post_path = output_dir / "post.png"
-        generate_single_post(
-            hook=post.hook or post.caption[:80],
-            caption_preview=post.caption[:140],
+        cta_path = output_dir / f"slide_{len(tips) + 1:02d}_cta.png"
+        generate_tips_cta(
+            tips_cta=post.tips_cta or "Save this post for later!",
             brand_handle=handle,
-            output_path=post_path,
+            output_path=cta_path,
         )
-        paths.append(str(post_path))
+        paths.append(str(cta_path))
+
+    # ── Myth vs Fact ───────────────────────────────────────────────────────────
+    elif post_type == "myth_fact":
+        myth_path = output_dir / "slide_01_myth.png"
+        generate_myth_slide(
+            myth=post.myth or (post.slides[0].get("body","") if post.slides else post.hook),
+            brand_handle=handle,
+            output_path=myth_path,
+        )
+        paths.append(str(myth_path))
+
+        fact_path = output_dir / "slide_02_fact.png"
+        generate_fact_slide(
+            fact_headline=post.fact_headline or (post.slides[1].get("heading","") if len(post.slides) > 1 else "The Truth"),
+            fact_body=post.fact_body or (post.slides[1].get("body","") if len(post.slides) > 1 else post.caption[:200]),
+            brand_handle=handle,
+            output_path=fact_path,
+        )
+        paths.append(str(fact_path))
+
+    # ── Quote card ─────────────────────────────────────────────────────────────
+    elif post_type == "quote":
+        out = output_dir / "post.png"
+        generate_quote_card(
+            quote_text=post.quote_text or post.hook,
+            quote_attribution=post.quote_attribution or config.BRAND_NAME,
+            quote_context=post.quote_context or "",
+            brand_handle=handle,
+            output_path=out,
+        )
+        paths.append(str(out))
+
+    # ── Fallback: treat as tips carousel ──────────────────────────────────────
+    else:
+        total = len(post.slides) + 1
+        cover_path = output_dir / "slide_00_cover.png"
+        generate_tips_cover(
+            tips_title=post.hook or post.caption[:60],
+            total_slides=total,
+            brand_handle=handle,
+            output_path=cover_path,
+        )
+        paths.append(str(cover_path))
+
+        for idx, slide in enumerate(post.slides):
+            slide_path = output_dir / f"slide_{idx + 1:02d}.png"
+            generate_tips_slide(
+                number=f"{idx+1:02d}",
+                heading=slide.get("heading", ""),
+                body=slide.get("body", ""),
+                bonus="",
+                slide_num=idx + 2,
+                total_slides=total,
+                brand_handle=handle,
+                output_path=slide_path,
+            )
+            paths.append(str(slide_path))
 
     return paths
 

@@ -237,6 +237,7 @@ def generate_images():
         post_data = [
             {
                 "id": p.id,
+                "post_type": p.post_type or "tips",
                 "format": p.format,
                 "hook": p.hook or "",
                 "caption": p.caption,
@@ -257,6 +258,7 @@ def generate_images():
 
     for p in no_images:
         post_content = GeneratedPost(
+            post_type=p["post_type"],
             format=p["format"],
             hook=p["hook"],
             caption=p["caption"],

@@ -44,6 +44,7 @@ class Post(Base):
     article_id = Column(Integer, ForeignKey("articles.id"), nullable=True)
 
     # Content
+    post_type = Column(String(16), nullable=True, default="tips")  # "stat"|"tips"|"myth_fact"|"quote"
     format = Column(String(16), nullable=False, default="single")  # "single" | "carousel"
     hook = Column(String(256), nullable=True)        # First grabbing line
     caption = Column(Text, nullable=False)
