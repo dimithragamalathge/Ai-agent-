@@ -24,10 +24,11 @@ class PubMedScraper(BaseScraper):
 
     RATE_LIMIT_SECONDS = 0.34  # 3 req/s without key; overridden if key present
 
-    def __init__(self, query: str, topic: str, max_results: int = 3) -> None:
+    def __init__(self, query: str, topic: str, max_results: int = 3, reldate: int | None = None) -> None:
         super().__init__(source_name="pubmed", topic=topic)
         self.query = query
         self.max_results = max_results
+        self.reldate = reldate  # None = no date restriction (evergreen topics)
         if config.PUBMED_API_KEY:
             self.RATE_LIMIT_SECONDS = 0.11  # 10 req/s with key
 
@@ -39,9 +40,10 @@ class PubMedScraper(BaseScraper):
             "retmax": self.max_results,
             "sort": "pub+date",
             "retmode": "json",
-            "datetype": "pdat",
-            "reldate": 60,  # Last 60 days
         }
+        if self.reldate:
+            params["datetype"] = "pdat"
+            params["reldate"] = self.reldate
         if config.PUBMED_API_KEY:
             params["api_key"] = config.PUBMED_API_KEY
 
@@ -110,6 +112,7 @@ def fetch_all_pubmed(existing_urls: set[str] | None = None) -> list[ScrapedArtic
             query=q["query"],
             topic=q["topic"],
             max_results=q["max_results"],
+            reldate=q.get("reldate"),  # None for evergreen topics
         )
         new = scraper.fetch(existing_urls=seen_urls)
         seen_urls.update(a.url for a in new)

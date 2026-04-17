@@ -26,6 +26,7 @@ def run_full_pipeline() -> None:
 
     After this runs, open the dashboard to review and publish.
     """
+    from scraper.base import ScrapedArticle
     from scraper.rss import fetch_all_rss
     from scraper.pubmed import fetch_all_pubmed
     from processor.selector import select_best_articles
@@ -51,26 +52,71 @@ def run_full_pipeline() -> None:
 
     logger.info("Scraped %d new articles total", len(all_scraped))
 
-    if not all_scraped:
-        logger.warning("No new articles found — skipping this pipeline run")
-        return
-
-    # ── 2. Save articles to DB ─────────────────────────────────────────────
-    with get_session() as db:
-        for a in all_scraped:
-            db.add(Article(
-                url=a.url,
-                title=a.title,
-                summary=a.summary,
-                source=a.source,
-                topic=a.topic,
-                scraped_at=a.scraped_at,
-            ))
-    logger.info("Saved %d articles to database", len(all_scraped))
+    # ── 2. Save new articles to DB ─────────────────────────────────────────
+    if all_scraped:
+        with get_session() as db:
+            for a in all_scraped:
+                db.add(Article(
+                    url=a.url,
+                    title=a.title,
+                    summary=a.summary,
+                    source=a.source,
+                    topic=a.topic,
+                    scraped_at=a.scraped_at,
+                ))
+        logger.info("Saved %d articles to database", len(all_scraped))
+    else:
+        logger.info("No new articles scraped — will select from existing DB articles")
 
     # ── 3. Select best articles ────────────────────────────────────────────
+    # If we scraped new articles, pick from those; otherwise fall back to
+    # unused articles already in the DB so the pipeline can always run.
     logger.info("Step 2/5: Asking Claude to select the best articles…")
-    selected = select_best_articles(all_scraped, n=3)
+
+    if all_scraped:
+        pool = all_scraped
+    else:
+        with get_session() as db:
+            db_articles = (
+                db.query(Article)
+                .filter_by(used=False)
+                .order_by(Article.scraped_at.desc())
+                .limit(30)
+                .all()
+            )
+            pool = [
+                ScrapedArticle(
+                    url=a.url, title=a.title, summary=a.summary or "",
+                    source=a.source, topic=a.topic or "general_wellness",
+                    scraped_at=a.scraped_at,
+                )
+                for a in db_articles
+            ]
+
+        if not pool:
+            # Last resort: re-use any articles regardless of used flag
+            with get_session() as db:
+                db_articles = (
+                    db.query(Article)
+                    .order_by(Article.scraped_at.desc())
+                    .limit(30)
+                    .all()
+                )
+                pool = [
+                    ScrapedArticle(
+                        url=a.url, title=a.title, summary=a.summary or "",
+                        source=a.source, topic=a.topic or "general_wellness",
+                        scraped_at=a.scraped_at,
+                    )
+                    for a in db_articles
+                ]
+
+        if not pool:
+            logger.warning("No articles in database — run pipeline after scraping completes")
+            return
+        logger.info("Falling back to %d existing DB articles", len(pool))
+
+    selected = select_best_articles(pool, n=3)
     logger.info("Claude selected %d articles", len(selected))
 
     # ── 4. Generate content + design ──────────────────────────────────────
