@@ -1,9 +1,6 @@
 """
 Template selection and design creation logic.
-
-Priority order:
-  1. Canva API  — if CANVA_SINGLE_POST_TEMPLATE_ID and CANVA_ACCESS_TOKEN are set
-  2. Pillow generator — automatic, no setup needed (default)
+Routes each post_type to the correct image generator functions.
 """
 
 import logging
@@ -15,16 +12,7 @@ from processor.generator import GeneratedPost
 logger = logging.getLogger(__name__)
 
 
-def create_post_images(
-    post: GeneratedPost,
-    post_id: int,
-    client=None,
-) -> list[str]:
-    """
-    Produce PNG images for a post. Returns a list of local file paths.
-
-    Uses Canva if configured, otherwise falls back to the Pillow generator.
-    """
+def create_post_images(post: GeneratedPost, post_id: int, client=None) -> list[str]:
     output_dir = config.OUTPUT_DIR / f"post_{post_id}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -38,33 +26,31 @@ def create_post_images(
         logger.info("Using Canva for post %d", post_id)
         return _create_with_canva(post, post_id, output_dir, client)
     else:
-        logger.info("Using Pillow image generator for post %d (type: %s)", post_id, post.post_type)
+        logger.info("Using Pillow generator for post %d (type: %s)", post_id, post.post_type)
         return _create_with_pillow(post, post_id, output_dir)
 
 
-# ── Pillow generator (default) ────────────────────────────────────────────────
+# ── Pillow generator ──────────────────────────────────────────────────────────
 
-
-def _create_with_pillow(
-    post: GeneratedPost,
-    post_id: int,
-    output_dir: Path,
-) -> list[str]:
+def _create_with_pillow(post: GeneratedPost, post_id: int, output_dir: Path) -> list[str]:
     from designer.image_generator import (
+        generate_hook_slide,
+        generate_clinical_reality_slide,
+        generate_chart_breakdown_slide,
+        generate_text_breakdown_slide,
+        generate_prevention_slide,
+        generate_cta_slide,
         generate_stat_card,
-        generate_tips_cover,
-        generate_tips_slide,
-        generate_tips_cta,
+        generate_quote_card,
         generate_myth_slide,
         generate_fact_slide,
-        generate_quote_card,
     )
 
-    handle = config.INSTAGRAM_HANDLE
+    handle   = config.INSTAGRAM_HANDLE
     paths: list[str] = []
     post_type = getattr(post, "post_type", "tips")
 
-    # ── Stat card ──────────────────────────────────────────────────────────────
+    # ── Stat card (single image) ───────────────────────────────────────────────
     if post_type == "stat":
         out = output_dir / "post.png"
         generate_stat_card(
@@ -77,156 +63,150 @@ def _create_with_pillow(
         )
         paths.append(str(out))
 
-    # ── Tip carousel ───────────────────────────────────────────────────────────
+    # ── Tips — 7-slide carousel ────────────────────────────────────────────────
     elif post_type == "tips":
-        tips = post.tips if post.tips else [
-            {"number": f"{i+1:02d}", "heading": s.get("heading",""), "body": s.get("body",""), "bonus": ""}
-            for i, s in enumerate(post.slides)
-        ]
-        total = len(tips) + 2  # cover + tips + CTA
+        breakdown = post.breakdown_slides or []
+        # Total slides: hook + clinical reality + breakdown slides + prevention + CTA
+        total = 2 + len(breakdown) + 2
 
-        cover_path = output_dir / "slide_00_cover.png"
-        generate_tips_cover(
-            tips_title=post.tips_title or post.hook or post.caption[:60],
-            total_slides=total,
-            brand_handle=handle,
-            output_path=cover_path,
+        # Slide 1: Hook
+        p = output_dir / "slide_01_hook.png"
+        generate_hook_slide(post.hook or post.caption[:60], total, handle, p)
+        paths.append(str(p))
+
+        # Slide 2: Clinical Reality
+        p = output_dir / "slide_02_reality.png"
+        generate_clinical_reality_slide(
+            post.clinical_reality or post.caption[:300],
+            2, total, handle, p,
         )
-        paths.append(str(cover_path))
+        paths.append(str(p))
 
-        for idx, tip in enumerate(tips):
-            slide_path = output_dir / f"slide_{idx + 1:02d}.png"
-            generate_tips_slide(
-                number=tip.get("number", f"{idx+1:02d}"),
-                heading=tip.get("heading", ""),
-                body=tip.get("body", ""),
-                bonus=tip.get("bonus", ""),
-                slide_num=idx + 2,
-                total_slides=total,
-                brand_handle=handle,
-                output_path=slide_path,
-            )
-            paths.append(str(slide_path))
+        # Slides 3-N: Breakdown (chart or text)
+        for idx, bd in enumerate(breakdown):
+            slide_num = idx + 3
+            p = output_dir / f"slide_{slide_num:02d}_breakdown.png"
+            if bd.get("type") == "bar_chart":
+                generate_chart_breakdown_slide(
+                    title=bd.get("title", ""),
+                    takeaway=bd.get("takeaway", ""),
+                    categories=bd.get("categories", []),
+                    values=bd.get("values", []),
+                    highlight_index=bd.get("highlight_index", 0),
+                    slide_num=slide_num, total=total,
+                    brand_handle=handle, output_path=p,
+                )
+            else:
+                generate_text_breakdown_slide(
+                    heading=bd.get("heading", ""),
+                    body=bd.get("body", ""),
+                    slide_num=slide_num, total=total,
+                    brand_handle=handle, output_path=p,
+                )
+            paths.append(str(p))
 
-        cta_path = output_dir / f"slide_{len(tips) + 1:02d}_cta.png"
-        generate_tips_cta(
-            tips_cta=post.tips_cta or "Save this post for later!",
-            brand_handle=handle,
-            output_path=cta_path,
+        # Prevention slide
+        p = output_dir / f"slide_{total - 1:02d}_prevention.png"
+        generate_prevention_slide(
+            bullets=post.prevention_bullets or ["Consult your doctor",
+                                                "Track your symptoms",
+                                                "Make small daily changes"],
+            slide_num=total - 1, total=total,
+            brand_handle=handle, output_path=p,
         )
-        paths.append(str(cta_path))
+        paths.append(str(p))
 
-    # ── Myth vs Fact ───────────────────────────────────────────────────────────
+        # CTA + Disclaimer
+        p = output_dir / f"slide_{total:02d}_cta.png"
+        generate_cta_slide(
+            cta_text=post.cta_text or "Save this post 📌",
+            disclaimer=post.disclaimer or "For educational purposes only. Consult your doctor.",
+            brand_handle=handle, output_path=p,
+        )
+        paths.append(str(p))
+
+    # ── Myth vs Fact (2 slides) ────────────────────────────────────────────────
     elif post_type == "myth_fact":
-        myth_path = output_dir / "slide_01_myth.png"
+        p = output_dir / "slide_01_myth.png"
         generate_myth_slide(
-            myth=post.myth or (post.slides[0].get("body","") if post.slides else post.hook),
-            brand_handle=handle,
-            output_path=myth_path,
+            myth=post.myth or (post.slides[0].get("body", "") if post.slides else post.hook),
+            brand_handle=handle, output_path=p,
         )
-        paths.append(str(myth_path))
+        paths.append(str(p))
 
-        fact_path = output_dir / "slide_02_fact.png"
+        p = output_dir / "slide_02_fact.png"
         generate_fact_slide(
-            fact_headline=post.fact_headline or (post.slides[1].get("heading","") if len(post.slides) > 1 else "The Truth"),
-            fact_body=post.fact_body or (post.slides[1].get("body","") if len(post.slides) > 1 else post.caption[:200]),
-            brand_handle=handle,
-            output_path=fact_path,
+            fact_headline=post.fact_headline or "The Truth",
+            fact_body=post.fact_body or (post.slides[1].get("body", "") if len(post.slides) > 1 else post.caption[:300]),
+            brand_handle=handle, output_path=p,
         )
-        paths.append(str(fact_path))
+        paths.append(str(p))
 
-    # ── Quote card ─────────────────────────────────────────────────────────────
+    # ── Quote card (single image) ──────────────────────────────────────────────
     elif post_type == "quote":
-        out = output_dir / "post.png"
+        p = output_dir / "post.png"
         generate_quote_card(
             quote_text=post.quote_text or post.hook,
             quote_attribution=post.quote_attribution or config.BRAND_NAME,
             quote_context=post.quote_context or "",
-            brand_handle=handle,
-            output_path=out,
+            brand_handle=handle, output_path=p,
         )
-        paths.append(str(out))
+        paths.append(str(p))
 
-    # ── Fallback: treat as tips carousel ──────────────────────────────────────
+    # ── Fallback ───────────────────────────────────────────────────────────────
     else:
         total = len(post.slides) + 1
-        cover_path = output_dir / "slide_00_cover.png"
-        generate_tips_cover(
-            tips_title=post.hook or post.caption[:60],
-            total_slides=total,
-            brand_handle=handle,
-            output_path=cover_path,
-        )
-        paths.append(str(cover_path))
-
+        p = output_dir / "slide_01_hook.png"
+        generate_hook_slide(post.hook or post.caption[:60], total, handle, p)
+        paths.append(str(p))
         for idx, slide in enumerate(post.slides):
-            slide_path = output_dir / f"slide_{idx + 1:02d}.png"
-            generate_tips_slide(
-                number=f"{idx+1:02d}",
+            p = output_dir / f"slide_{idx + 2:02d}.png"
+            generate_text_breakdown_slide(
                 heading=slide.get("heading", ""),
                 body=slide.get("body", ""),
-                bonus="",
-                slide_num=idx + 2,
-                total_slides=total,
-                brand_handle=handle,
-                output_path=slide_path,
+                slide_num=idx + 2, total=total,
+                brand_handle=handle, output_path=p,
             )
-            paths.append(str(slide_path))
+            paths.append(str(p))
 
     return paths
 
 
-# ── Canva (optional, when template IDs are configured) ───────────────────────
+# ── Canva (optional) ──────────────────────────────────────────────────────────
 
-
-def _create_with_canva(
-    post: GeneratedPost,
-    post_id: int,
-    output_dir: Path,
-    client=None,
-) -> list[str]:
+def _create_with_canva(post: GeneratedPost, post_id: int, output_dir: Path, client=None) -> list[str]:
     from designer.canva_client import CanvaClient
-
     if client is None:
         client = CanvaClient()
-
     if post.format == "carousel" and post.slides:
         return _canva_carousel(post, post_id, output_dir, client)
-    else:
-        return _canva_single(post, post_id, output_dir, client)
+    return _canva_single(post, post_id, output_dir, client)
 
 
 def _canva_single(post, post_id, output_dir, client) -> list[str]:
-    template_id = config.CANVA_SINGLE_POST_TEMPLATE_ID
-    design_id = client.create_design_from_template(template_id)
-
-    fields = [
+    design_id = client.create_design_from_template(config.CANVA_SINGLE_POST_TEMPLATE_ID)
+    client.autofill_design(design_id, [
         {"name": "hook",            "type": "text", "text": post.hook},
         {"name": "caption_preview", "type": "text", "text": post.caption[:120]},
         {"name": "brand_handle",    "type": "text", "text": config.INSTAGRAM_HANDLE},
-    ]
-    client.autofill_design(design_id, fields)
-
-    output_path = output_dir / "post.png"
-    client.export_design_as_png(design_id, output_path)
-    return [str(output_path)]
+    ])
+    out = output_dir / "post.png"
+    client.export_design_as_png(design_id, out)
+    return [str(out)]
 
 
 def _canva_carousel(post, post_id, output_dir, client) -> list[str]:
     template_id = config.CANVA_CAROUSEL_TEMPLATE_ID or config.CANVA_SINGLE_POST_TEMPLATE_ID
-    paths: list[str] = []
-
+    paths = []
     for idx, slide in enumerate(post.slides):
         design_id = client.create_design_from_template(template_id)
-        fields = [
+        client.autofill_design(design_id, [
             {"name": "slide_heading", "type": "text", "text": slide.get("heading", "")},
             {"name": "slide_body",    "type": "text", "text": slide.get("body", "")},
             {"name": "slide_number",  "type": "text", "text": f"{idx + 1}/{len(post.slides)}"},
             {"name": "brand_handle",  "type": "text", "text": config.INSTAGRAM_HANDLE},
-        ]
-        client.autofill_design(design_id, fields)
-        output_path = output_dir / f"slide_{idx + 1:02d}.png"
-        client.export_design_as_png(design_id, output_path)
-        paths.append(str(output_path))
-
+        ])
+        out = output_dir / f"slide_{idx + 1:02d}.png"
+        client.export_design_as_png(design_id, out)
+        paths.append(str(out))
     return paths
