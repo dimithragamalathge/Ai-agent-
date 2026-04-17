@@ -58,22 +58,38 @@ class GeneratedPost:
     quote_context: str = ""
 
 
-SYSTEM_PROMPT = f"""You are an expert Instagram content creator for {config.BRAND_NAME},
-a friendly, science-backed health and lifestyle account.
+SYSTEM_PROMPT = f"""You are the Instagram content creator for {config.BRAND_NAME} (@Dr.dimithra),
+a warm, approachable medical education page for the general public.
 
-Your tone is warm and approachable (like a knowledgeable friend, not a doctor),
-empowering, clear (no jargon), and concise.
+Brand voice:
+- Knowledgeable doctor-friend — never a textbook, never fear-mongering
+- Warm and personal — use "you" and "your body", never cold or clinical
+- Use medical terms but ALWAYS briefly explain them in plain language immediately after
+- Audience: general public with moderate health literacy
+
+Caption structure (follow this every time):
+1. Hook line — bold statement, surprising fact, or relatable question (under 12 words, no jargon)
+2. 2–4 sentences of educational content; mention medical terms but explain each one
+3. 1–2 practical takeaway sentences the reader can act on today
+4. Warm relevant emojis throughout (not excessive)
+5. End with ONE of these CTAs:
+   - "Save this post 📌"
+   - "Share this with someone who needs to hear it 💙"
+   - "Follow for more health tips you can actually use"
+   - "Tag a friend who needs this 💬"
 
 Choose the best post type for each article:
-- "stat"      → article has a compelling statistic or research finding
+- "stat"      → article has a striking statistic or research finding
 - "tips"      → article has multiple actionable tips, foods, habits, or steps
 - "myth_fact" → article debunks a common myth or corrects a misconception
-- "quote"     → article contains a powerful insight or quote worth amplifying
+- "quote"     → article contains a powerful insight worth amplifying
 
-Captions always start with the hook, use short paragraphs, and end with a CTA.
-Hashtags: mix niche (#GutHealthTips) with broad (#WellnessJourney).
-Always include #HealthyLiving #WellnessTips #{config.BRAND_NAME.replace(" ", "")}
-Total hashtags: exactly 20.
+Hashtag pool — always pick 20:
+Broad: #HealthTips #MedicalEducation #DoctorOnInstagram #HealthAwareness #PublicHealth #HealthyLiving
+Niche: #HealthLiteracy #KnowYourHealth #MedicalMyths #DoctorAdvice #PatientEducation #PreventiveMedicine
+Engagement: #AskYourDoctor #HealthFacts #MedicalFacts #HealthyHabits
+Always add: #{config.BRAND_NAME.replace(" ", "").replace(".", "")} #DrDimithra
+Always add condition-specific tags (e.g. #HeartHealth #DiabetesAwareness #MentalHealthMatters)
 """
 
 
@@ -195,13 +211,14 @@ Rules:
             hook=article.title[:80],
             caption=f"{article.title}\n\n{article.summary[:500]}\n\n"
                     f"Follow {config.INSTAGRAM_HANDLE} for more.",
-            hashtags=["#HealthyLiving", "#WellnessTips", "#Health", "#Wellness",
-                      "#HealthTips", "#HealthyLifestyle", "#MedicalResearch",
-                      "#Nutrition", "#MentalHealth", "#ScienceBacked",
-                      "#HealthNews", "#HealthyHabits", "#Prevention",
-                      "#HealthEducation", "#WellnessJourney", "#Mindfulness",
-                      "#HealthyMind", "#HealthyBody", "#EvidenceBased",
-                      f"#{config.BRAND_NAME.replace(' ', '')}"],
+            hashtags=["#HealthTips", "#MedicalEducation", "#DoctorOnInstagram",
+                      "#HealthAwareness", "#PublicHealth", "#HealthyLiving",
+                      "#HealthLiteracy", "#KnowYourHealth", "#MedicalMyths",
+                      "#DoctorAdvice", "#PatientEducation", "#PreventiveMedicine",
+                      "#AskYourDoctor", "#HealthFacts", "#MedicalFacts",
+                      "#HealthyHabits", "#HeartHealth", "#MentalHealthMatters",
+                      "#DrDimithra",
+                      f"#{config.BRAND_NAME.replace(' ', '').replace('.', '')}"],
             slides=[],
         )
     except anthropic.APIError as exc:

@@ -25,16 +25,16 @@ logger = logging.getLogger(__name__)
 SIZE    = 1080
 PAD     = 80      # left/right padding
 
-# ── Colour palette ────────────────────────────────────────────────────────────
+# ── Colour palette — Dr. Dimithra brand (warm, approachable, not clinical) ────
 WHITE       = "#FFFFFF"
-CREAM       = "#FDF6EC"
-GOLD        = "#E8A84C"
-ORANGE      = "#D4622A"
-DARK        = "#1A1A1A"
-MID         = "#4A4A4A"
-MUTED       = "#888888"
-MYTH_RED    = "#C0392B"
-FACT_GREEN  = "#1E8449"
+CREAM       = "#FFF8F2"   # warm peach-cream
+PEACH       = "#FEF0E7"   # soft peach for quote cards
+GOLD        = "#D4924A"   # warm gold accent
+DARK        = "#2A1F1A"   # deep warm brown (not harsh black)
+MID         = "#5C4A3A"   # warm medium brown
+MUTED       = "#9E8878"   # warm muted rose-brown
+MYTH_RED    = "#7B2D3E"   # deep burgundy (warm, not harsh red)
+FACT_GREEN  = "#3D7A5E"   # sage green (warm, not bright green)
 BLOCK_TEXT  = "#FFFFFF"   # white text on coloured blocks
 
 # ── Font cache ────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ def generate_stat_card(
       [12px gold bottom bar]
     """
     fonts = _ensure_fonts()
-    img = Image.new("RGB", (SIZE, SIZE), WHITE)
+    img = Image.new("RGB", (SIZE, SIZE), CREAM)
     draw = ImageDraw.Draw(img)
 
     # Top gold block
@@ -285,7 +285,7 @@ def generate_tips_slide(
     Tip content slide: large number + heading, body, bonus tip.
     """
     fonts = _ensure_fonts()
-    img = Image.new("RGB", (SIZE, SIZE), WHITE)
+    img = Image.new("RGB", (SIZE, SIZE), CREAM)
     draw = ImageDraw.Draw(img)
 
     _thin_bar(draw, 0)
@@ -387,7 +387,7 @@ def generate_myth_slide(
 ) -> Path:
     """Myth slide: bold red block at top, MYTH label, myth statement."""
     fonts = _ensure_fonts()
-    img = Image.new("RGB", (SIZE, SIZE), WHITE)
+    img = Image.new("RGB", (SIZE, SIZE), CREAM)
     draw = ImageDraw.Draw(img)
 
     # Red colour block (top 200px)
@@ -436,7 +436,7 @@ def generate_fact_slide(
 ) -> Path:
     """Fact slide: bold green block at top, FACT label, fact content."""
     fonts = _ensure_fonts()
-    img = Image.new("RGB", (SIZE, SIZE), WHITE)
+    img = Image.new("RGB", (SIZE, SIZE), CREAM)
     draw = ImageDraw.Draw(img)
 
     draw.rectangle([0, 0, SIZE, 200], fill=FACT_GREEN)
@@ -497,7 +497,7 @@ def generate_quote_card(
       [12px gold bottom bar]
     """
     fonts = _ensure_fonts()
-    img = Image.new("RGB", (SIZE, SIZE), CREAM)
+    img = Image.new("RGB", (SIZE, SIZE), PEACH)
     draw = ImageDraw.Draw(img)
 
     _thin_bar(draw, 0)
